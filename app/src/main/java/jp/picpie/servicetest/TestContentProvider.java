@@ -12,6 +12,8 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 
+import androidx.collection.SimpleArrayMap;
+
 public class TestContentProvider extends ContentProvider {
     public TestContentProvider() {
     }
@@ -46,6 +48,7 @@ public class TestContentProvider extends ContentProvider {
                         String[] selectionArgs, String sortOrder) {
         // TODO: Implement this to handle query requests from clients.
         //throw new UnsupportedOperationException("Not yet implemented");
+
         Cursor cur = new MyCursor();
         return cur;
     }
@@ -58,40 +61,90 @@ public class TestContentProvider extends ContentProvider {
     }
 }
 
-class MyCursor implements Cursor {
-    static String[] columns = {"first", "second"};
-    int count = 5;
+class MyCursor extends BaseCursor {
+    String[] columnnames = {"_id","Float1", "String2", "Blob3", "Null4"};
+    int[] columntypes = {Cursor.FIELD_TYPE_INTEGER,Cursor.FIELD_TYPE_FLOAT, Cursor.FIELD_TYPE_STRING, Cursor.FIELD_TYPE_BLOB, Cursor.FIELD_TYPE_NULL};
+
+    public MyCursor(){
+        setColumnNames(columnnames);
+        setColumnTypes(columntypes);
+        //ToDo: データベース読み出しとか
+
+    }
+
+    @Override
+    public long getLong(int columnIndex) {
+        long rtv = getPosition()+100;
+        Log.d("CP", "getLong columnIndex("+Integer.toString(columnIndex)+"): "+String.valueOf(rtv));
+        return rtv;
+    }
+
+}
+
+class BaseCursor  implements Cursor {
+    int count = 3;
     int pos = -1;
+    String[] columnNames;
+    int[] colmnTypes;
+
+    void setColumnNames(String[] _columnnames){
+        Log.d("CP", "setColumnNames _columnnames="+_columnnames.toString());
+        columnNames = _columnnames;
+    }
+
+    void setColumnTypes(int[] _colmntypes){
+        Log.d("CP", "setColumnTypes _colmntypes="+_colmntypes.toString());
+        colmnTypes = _colmntypes;
+    }
+
+    void setCount(int _count){
+        count = _count;
+    }
+
+    @Override
+    public int getType(int columnIndex) {
+        Log.d("CP", "getType columnIndex="+Integer.toString(columnIndex));
+        if( columnIndex < colmnTypes.length ){
+            return colmnTypes[columnIndex];
+        }
+        return Cursor.FIELD_TYPE_NULL;
+    }
 
     @Override
     public int getCount() {
+        Log.d("CP", "getCount count="+Integer.toString(count));
         return count;
     }
 
     @Override
     public int getPosition() {
+        Log.d("CP", "getPosition pos="+Integer.toString(pos));
         return pos;
     }
 
     @Override
     public boolean move(int offset) {
+        Log.d("CP", "move offset="+Integer.toString(offset));
         return true;
     }
 
     @Override
     public boolean moveToPosition(int position) {
+        Log.d("CP", "moveToPosition position="+Integer.toString(position));
         pos = position;
         return true;
     }
 
     @Override
     public boolean moveToFirst() {
+        Log.d("CP", "moveToFirst");
         pos = -1 ;
         return true;
     }
 
     @Override
     public boolean moveToLast() {
+        Log.d("CP", "moveToFirst");
         return false;
     }
 
@@ -107,172 +160,213 @@ class MyCursor implements Cursor {
 
     @Override
     public boolean moveToPrevious() {
+        Log.d("CP", "moveToPrevious pos="+Integer.toString(pos));
         return false;
     }
 
     @Override
     public boolean isFirst() {
+        Log.d("CP", "isFirst pos="+Integer.toString(pos));
         return true;
     }
 
     @Override
     public boolean isLast() {
+        Log.d("CP", "isLast pos="+Integer.toString(pos));
         return false;
     }
 
     @Override
     public boolean isBeforeFirst() {
+        Log.d("CP", "isBeforeFirst pos="+Integer.toString(pos));
         return false;
     }
 
     @Override
     public boolean isAfterLast() {
+        Log.d("CP", "isAfterLast pos="+Integer.toString(pos));
         return false;
     }
 
     @Override
     public int getColumnIndex(String columnName) {
-        return 0;
+        Log.d("CP", "getColumnIndex columnName="+columnName);
+        for( int i=0 ; i < columnNames.length; ++i ){
+            if( columnNames[i].compareTo(columnName)==0){
+                return i;
+            }
+        }
+        return -1;
     }
 
     @Override
     public int getColumnIndexOrThrow(String columnName) throws IllegalArgumentException {
-        return 0;
+        Log.d("CP", "getColumnIndexOrThrow columnName="+columnName);
+        int inx = getColumnIndex(columnName);
+        if( inx != -1){
+            return inx;
+        }
+        throw new IllegalArgumentException();
     }
 
     @Override
     public String getColumnName(int columnIndex) {
-        return columns[columnIndex];
+        Log.d("CP", "getColumnName columnIndex="+Integer.toString(columnIndex));
+        return columnNames[columnIndex];
     }
 
     @Override
     public String[] getColumnNames() {
-        return columns;
+        Log.d("CP", "getColumnNames");
+        return columnNames;
     }
 
     @Override
     public int getColumnCount() {
-        return columns.length;
+        Log.d("CP", "getColumnCount");
+        return columnNames.length;
     }
 
     @Override
     public byte[] getBlob(int columnIndex) {
-        return new byte[0];
+        Log.d("CP", "getBlob columnIndex="+Integer.toString(columnIndex));
+        byte[] rtv = new byte[16];
+        int f=1;
+        rtv[0] = 0; rtv[1] = 1;
+        for( int n=2; n < rtv.length; ++n){
+            rtv[n] = (byte)(rtv[n-2]+rtv[n-1]);
+        }
+        return rtv;
     }
 
     @Override
     public String getString(int columnIndex) {
-        Log.d("CP", "getString columnIndex="+Integer.toString(columnIndex));
-        return columns[columnIndex]+" "+Integer.toString(pos)+" value";
+        String rtv = columnNames[columnIndex]+" "+Integer.toString(pos)+" value";
+        Log.d("CP", "getString columnIndex="+Integer.toString(columnIndex)+" "+rtv);
+        return rtv;
     }
 
     @Override
     public void copyStringToBuffer(int columnIndex, CharArrayBuffer buffer) {
-
+        Log.d("CP", "copyStringToBuffer columnIndex="+Integer.toString(columnIndex));
     }
 
     @Override
     public short getShort(int columnIndex) {
+        Log.d("CP", "getShort columnIndex="+Integer.toString(columnIndex));
         return 0;
     }
 
     @Override
     public int getInt(int columnIndex) {
-        return 0;
+        int rtv = (int)getLong( columnIndex );
+        Log.d("CP", "getInt columnIndex="+Integer.toString(columnIndex)+" "+String.valueOf(rtv));
+        return  rtv;
     }
 
     @Override
     public long getLong(int columnIndex) {
-        return 0;
+        long rtv = 0;
+        if( columnIndex==0){
+            rtv = pos;
+        }
+        Log.d("CP", "getLong columnIndex="+Integer.toString(columnIndex)+" "+String.valueOf(rtv));
+        return rtv;
     }
 
     @Override
     public float getFloat(int columnIndex) {
-        return 0;
+        float rtv = 3.14f;
+        Log.d("CP", "getFloat columnIndex="+Integer.toString(columnIndex)+" "+String.valueOf(rtv));
+        return rtv;
     }
 
     @Override
     public double getDouble(int columnIndex) {
-        return 0;
-    }
-
-    @Override
-    public int getType(int columnIndex) {
-        return Cursor.FIELD_TYPE_STRING;
+        double rtv = 3.14159f;
+        Log.d("CP", "getDouble columnIndex="+Integer.toString(columnIndex)+" "+String.valueOf(rtv));
+        return rtv;
     }
 
     @Override
     public boolean isNull(int columnIndex) {
+        Log.d("CP", "isNull columnIndex="+Integer.toString(columnIndex));
         return false;
     }
 
     @Override
     public void deactivate() {
-
+        Log.d("CP", "deactivate");
     }
 
     @Override
     public boolean requery() {
+        Log.d("CP", "requery");
         return false;
     }
 
     @Override
     public void close() {
-
+        Log.d("CP", "close");
     }
 
     @Override
     public boolean isClosed() {
+        Log.d("CP", "isClosed");
         return false;
     }
 
     @Override
     public void registerContentObserver(ContentObserver observer) {
-
+        Log.d("CP", "registerContentObserver");
     }
 
     @Override
     public void unregisterContentObserver(ContentObserver observer) {
-
+        Log.d("CP", "unregisterContentObserver");
     }
 
     @Override
     public void registerDataSetObserver(DataSetObserver observer) {
-
+        Log.d("CP", "registerDataSetObserver");
     }
 
     @Override
     public void unregisterDataSetObserver(DataSetObserver observer) {
-
+        Log.d("CP", "unregisterDataSetObserver");
     }
 
     @Override
     public void setNotificationUri(ContentResolver cr, Uri uri) {
-
+        Log.d("CP", "setNotificationUri");
     }
 
     @Override
     public Uri getNotificationUri() {
+        Log.d("CP", "getNotificationUri");
         return null;
     }
 
     @Override
     public boolean getWantsAllOnMoveCalls() {
+        Log.d("CP", "getWantsAllOnMoveCalls");
         return false;
     }
 
     @Override
     public void setExtras(Bundle extras) {
-
+        Log.d("CP", "setExtras");
     }
 
     @Override
     public Bundle getExtras() {
+        Log.d("CP", "getExtras");
         return null;
     }
 
     @Override
     public Bundle respond(Bundle extras) {
+        Log.d("CP", "respond");
         return null;
     }
 }
